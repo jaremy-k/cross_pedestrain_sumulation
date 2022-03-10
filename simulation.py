@@ -36,8 +36,8 @@ signalCoods = [(530, 230), (810, 230), (810, 570), (530, 570)]
 signalTimerCoods = [(530, 210), (810, 210), (810, 550), (530, 550)]
 
 # Coordinates of stop lines
-stopLines = {'right': 590, 'down': 330, 'left': 800, 'up': 535}
-defaultStop = {'right': 580, 'down': 320, 'left': 810, 'up': 545}
+stopLines = {'right': 590, 'down': 320, 'left': 800, 'up': 535}
+defaultStop = {'right': 580, 'down': 310, 'left': 810, 'up': 545}
 # stops = {'right': [580,580,580], 'down': [320,320,320], 'left': [810,810,810], 'up': [545,545,545]}
 
 # Gap between vehicles
@@ -50,18 +50,49 @@ simulation = pygame.sprite.Group()
 
 
 class Ped(pygame.sprite.Sprite):
-    def __init__(self):
-        path = "images/men.png"
-        self.image = pygame.image.load(path)
-        self.x = 50
-        self.y = 50
+    def __init__(self, v, pos):
+        pygame.sprite.Sprite.__init__(self)
+        image = pygame.image.load('images/men.png')
+        self.x = pos[0] + random.randint(-5,5)
+        self.y = pos[1] + random.randint(-5,5)
+        self.image = pygame.transform.scale(image,(50,50))
+        self.rect = self.image.get_rect(center=[self.x, self.y])
+        self._layer = 10
+        self.dir = v
+        self.crossed = 0
 
-    def render(self, screen):
+        # pedl = Ped([0,1],[xt, 0])
+
+    #def render(self, screen):
+
+
+    # def move(self):
+    #     while True:
+    #         self.x += 10
+
+    def update(self, delta, screen):
         screen.blit(self.image, (self.x, self.y))
+        pygame.sprite.Sprite.update(self)
+        random_speed = random.uniform(0.01, 0.1) * delta
 
-    def move(self):
-        while True:
-            self.x += 10
+        if (self.dir[0] == 1 and self.dir[1] == 0):
+            if (self.crossed == 0 and self.x > stopLines['right']):
+                self.crossed = 1
+
+            if (self.x <= defaultStop['right'] or self.crossed == 1 or (currentGreen == 0 and currentYellow == 0)):
+                self.x += self.dir[0] * random_speed;
+                # self.y += self.dir[1] * random_speed;
+
+                # if self.collide:
+                #     self.x -= self.dir[0] * random_speed;
+
+        if (self.dir[0] == 0 and self.dir[1] == 1):
+            if (self.crossed == 0 and self.y > stopLines['down']):
+                self.crossed = 1
+
+            if (self.y <= defaultStop['down'] or self.crossed == 1 or (currentGreen == 1 and currentYellow == 0)):
+                # self.x += self.dir[0] * random.uniform(0.01, 0.1) * delta;
+                self.y += self.dir[1] * random_speed;
 
 
 
@@ -232,13 +263,12 @@ def generateVehicles():
         Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number, directionNumbers[direction_number])
         time.sleep(1)
 
-def pedmove():
-    global speed
-    for speed in range(0, 100):
-        global xt
-        xt += speed
-    return xt
-
+# def pedmove():
+#     global speed
+#     for speed in range(0, 100):
+#         global xt
+#         xt += speed
+#     return xt
 
 class Main:
     thread1 = threading.Thread(name="initialization", target=initialize, args=())  # initialization
@@ -273,23 +303,72 @@ class Main:
     thread2.start()
 
 
+    pedsGroup = pygame.sprite.Group()
+    allGroup = pygame.sprite.LayeredUpdates()
+
+    # ped_l = Ped([1, 0], [xt, yt])
+    # pedsGroup.add(ped_l)
+
+    # ped_r = Ped([0, 1], [xt, yt])
+    # pedsGroup.add(ped_r)
+
+    # ped_l = Ped([1,0],[xt,yt])
+    # pedsGroup.add(ped_l)
+    #
+    # ped_r = Ped([0, 1], [xt, yt])
+    # pedsGroup.add(ped_r)
+
+    clock = pygame.time.Clock()
+
+    delay = 500
+    banana_event = pygame.USEREVENT + 1
+    pygame.time.set_timer(banana_event, delay)
+
 
     while True:
+
+        if pygame.key.get_pressed()[pygame.K_w]:
+            pedl = Ped([0,1],[xt, 0])
+            pedsGroup.add(pedl)
+
+        clock.tick(140)
+        delta = clock.get_time()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
+
+            if event.type == banana_event:
+                pedl = Ped([0, 1], [xt, 0])
+                pedsGroup.add(pedl)
+                pedl = Ped([1, 0], [0, yt])
+                pedsGroup.add(pedl)
+                banana_delay = random.randint(500, 1500)  # random from 0.5 to 3 seconds
+                pygame.time.set_timer(banana_event, banana_delay)
+
+                # if self.collide:
+                #     self.x -= self.dir[0] * random_speed;
+
         screen.blit(background, (0, 0))  # display background in simulation
-        # pedmove()
-        screen.blit(ped, [xt, yt])
 
+        # print(ped_l.x)
+        # if ped_l.x >= 1000:
+        #     ped_l.x = Ped([0, 1], [xt, 0])
+        #     pedsGroup.add(ped_l)
 
-        if yt < 400:
-            yt += 1
-        if yt >= 400:
-            yt -= 1
-            print(yt)
+        # # pedmove()
+        #pedsGroup.render(screen)
 
+        #allGroup.add(projectileGroup)
 
+        # if yt < 400:
+        #     yt += 1
+        # if yt >= 400:
+        #     yt -= 1
+        #     print(yt)
+
+        for p in pedsGroup:
+            if p.x > screenWidth or p.x < 0 or p.y > screenHeight or p.y < 0:
+                p.kill()
 
         for i in range(0,
                        noOfSignals):  # display signal and set timer according to current status: green, yellow, or red
@@ -327,6 +406,7 @@ class Main:
         #     x += i
         #     screen.blit(ped, [x, y])
 
+        pedsGroup.update(delta, screen)
 
 
         pygame.display.update()
